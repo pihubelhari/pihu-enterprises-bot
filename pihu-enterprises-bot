@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PIHU ENTERPRISES AI Assistant</title>
+    <style>
+        :root {
+            --primary: #2D9DA8;
+            --bg: #f8f9fa;
+            --text: #333333;
+            --white: #ffffff;
+            --chat-bg: #f0f4f5;
+            --card-radius: 16px;
+        }
+        .dark-mode {
+            --bg: #121212;
+            --text: #e0e0e0;
+            --white: #1e1e1e;
+            --chat-bg: #182526;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: var(--bg); color: var(--text); display: flex; height: 100vh; transition: 0.3s; padding: 10px; justify-content: center; }
+        
+        .app-container { width: 100%; max-width: 500px; background: var(--white); border-radius: var(--card-radius); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.1); position: relative; }
+        
+        header { background: var(--primary); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        header .shop-info { display: flex; flex-direction: column; }
+        header h1 { font-size: 1.2rem; font-weight: bold; }
+        header span { font-size: 0.75rem; opacity: 0.9; }
+        .nav-btns { display: flex; gap: 10px; }
+        .nav-btns button { background: rgba(255,255,255,0.2); border: none; padding: 8px; border-radius: 50%; color: white; cursor: pointer; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; }
+
+        #search-bar { padding: 8px 15px; background: var(--chat-bg); border: none; border-bottom: 1px solid rgba(0,0,0,0.1); color: var(--text); outline: none; display: none; }
+
+        .chat-area { flex: 1; overflow-y: auto; padding: 15px; background: var(--chat-bg); display: flex; flex-direction: column; gap: 12px; }
+        
+        .msg-row { display: flex; width: 100%; }
+        .msg-row.user { justify-content: flex-end; }
+        .msg-row.bot { justify-content: flex-start; }
+        
+        .bubble { max-width: 80%; padding: 12px 16px; border-radius: var(--card-radius); font-size: 0.95rem; line-height: 1.4; position: relative; animation: slideUp 0.3s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .user .bubble { background: var(--primary); color: white; border-bottom-right-radius: 4px; }
+        .bot .bubble { background: var(--white); color: var(--text); border-bottom-left-radius: 4px; }
+        
+        .time { font-size: 0.7rem; opacity: 0.6; margin-top: 5px; display: block; text-align: right; }
+        .user .time { color: #e0f2f1; }
+        
+        .copy-btn { background: none; border: none; color: var(--primary); font-size: 0.75rem; cursor: pointer; float: right; margin-left: 10px; margin-top: 5px; display: none; }
+        .bot .bubble:hover .copy-btn { display: block; }
+
+        .typing { display: flex; gap: 4px; padding: 10px; }
+        .typing span { width: 8px; height: 8px; background: var(--primary); border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; }
+        .typing span:nth-child(1) { animation-delay: -0.32s; }
+        .typing span:nth-child(2) { animation-delay: -0.16s; }
+
+        .quick-suggestions { display: flex; gap: 8px; padding: 10px 15px; overflow-x: auto; background: var(--white); white-space: nowrap; }
+        .suggestion-chip { background: var(--chat-bg); border: 1px solid var(--primary); color: var(--text); padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; cursor: pointer; transition: 0.2s; }
+        .suggestion-chip:hover { background: var(--primary); color: white; }
+
+        .input-container { padding: 12px; background: var(--white); display: flex; gap: 8px; align-items: center; border-top: 1px solid rgba(0,0,0,0.05); }
+        .input-container input { flex: 1; padding: 12px 16px; border: 1px solid #ddd; border-radius: 25px; background: var(--chat-bg); color: var(--text); outline: none; font-size: 0.95rem; }
+        .input-container button { background: var(--primary); border: none; color: white; padding: 12px; border-radius: 50%; width: 45px; height: 45px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+
+        /* Admin Panel Styles */
+        .admin-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--white); z-index: 10; display: none; flex-direction: column; animation: fadeIn 0.3s; }
+        .admin-header { background: #333; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .admin-content { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 15px; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-size: 0.85rem; font-weight: bold; }
+        .form-group input, .form-group textarea { padding: 10px; border: 1px solid #ddd; border-radius: 8px; background: var(--bg); color: var(--text); }
+        .btn-block { padding: 10px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .faq-item { background: var(--chat-bg); padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-top: 5px; font-size: 0.85rem; }
+        .delete-btn { color: red; cursor: pointer; background: none; border: none; }
+
+        @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <!-- Header -->
+    <header>
+        <div class="shop-info">
+            <h1 onclick="triggerAdmin()">PIHU ENTERPRISES AI</h1>
+            <span>Virtual Shop Assistant 🛒</span>
+        </div>
+        <div class="nav-btns">
+            <button onclick="toggleSearch()" title="Search History">🔍</button>
+            <button onclick="toggleDarkMode()" title="Toggle Dark/Light Mode">🌓</button>
+            <button onclick="clearChat()" title="Clear Chat">🗑️</button>
+            <button onclick="openAdmin()" title="Admin Training Panel" style="background:#ff9800;">⚙️</button>
+        </div>
+    </header>
+
+    <!-- Search Bar -->
+    <input type="text" id="search-bar" placeholder="Search previous chats..." oninput="searchChat()">
+
+    <!-- Chat Window -->
+    <div class="chat-area" id="chat-box"></div>
+
+    <!-- Typing Loader -->
+    <div class="msg-row bot" id="typing-loader" style="display: none;">
+        <div class="bubble">
+            <div class="typing"><span></span><span></span><span></span></div>
+        </div>
+    </div>
+
+    <!-- Quick Suggestions -->
+    <div class="quick-suggestions" id="suggestions"></div>
+
+    <!-- Input Bar -->
+    <div class="input-container">
+        <input type="text" id="user-msg" placeholder="Ask anything about our shop..." onkeypress="if(event.key==='Enter') handleUserMessage()">
+        <button onclick="startVoiceInput()" id="voice-btn" title="Voice Input">🎤</button>
+        <button onclick="handleUserMessage()" title="Send">➔</button>
+    </div>
+
+    <!-- Admin Panel Modal -->
+    <div class="admin-modal" id="admin-panel">
+        <div class="admin-header">
+            <h3>Shop Training Panel</h3>
+            <button onclick="closeAdmin()" style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;">✕</button>
+        </div>
+        <div class="admin-content">
+            <div class="form-group">
+                <label>Add Training Keywords (Comma Separated)</label>
+                <input type="text" id="new-keywords" placeholder="e.g., offer, discount, sasta, sale">
+            </div>
+            <div class="form-group">
+                <label>AI Reply / Response</label>
+                <textarea id="new-reply" rows="3" placeholder="Write what the AI should answer..."></textarea>
+            </div>
+            <button class="btn-block" onclick="saveNewRule()">Add Training Rule 🚀</button>
+            
+            <hr style="margin: 10px 0; opacity: 0.2;">
+            
+            <h4>Backup & Restore Data</h4>
+            <div style="display:flex; gap:10px; margin-bottom:15px;">
+                <button class="btn-block" style="background:#4CAF50;" onclick="exportData()">Export JSON</button>
+                <button class="btn-block" style="background:#00bcd4;" onclick="document.getElementById('import-file').click()">Import JSON</button>
+                <input type="file" id="import-file" style="display:none;" onchange="importData(event)">
+            </div>
+
+            <h4>Current Active Training Data</h4>
+            <div id="current-rules-list" style="max-height: 200px; overflow-y: auto;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Preloaded Shop Knowledge Base 
+    const INITIAL_KNOWLEDGE_BASE = {
+        "greetings": ["hi", "hello", "namaste", "hey", "राम राम", "नमस्ते"],
+        "fallback": "मैं PIHU ENTERPRISES का AI Assistant हूँ। मैं केवल हमारी दुकान और हमारे उत्पादों से संबंधित जानकारी दे सकता हूँ। कृपया दुकान से जुड़े सवाल पूछें! 😊",
+        "rules": [
+            { keywords: ["hi", "hello", "namaste", "नमस्ते", "hey"], reply: "नमस्ते! PIHU ENTERPRISES (Retail & Wholesale Clothing Store) में आपका स्वागत है। 🙏 मैं आपकी क्या मदद कर सकता हूँ?" },
+            { keywords: ["saree", "साड़ी", "साड़ियां", "suit", "बनारसी"], reply: "हमारे यहाँ Sarees, Dress Materials, Ladies Wear, Kids Wear और Gents Wear का बेहतरीन कलेक्शन उपलब्ध है। 🥻" },
+            { keywords: ["products", "collection", "वैरायटी", "कपड़े", "items"], reply: "PIHU ENTERPRISES पर आपको मिलेगा: \n• खूबसूरत साड़ियां (Sarees)\n• ड्रेस मटेरियल्स\n• फैंसी लेडीज वियर\n• आरामदायक किड्स वियर\n• ट्रेंडी जेंट्स वियर\n• सीजनल कलेक्शन और न्यू अराइवल्स!" },
+            { keywords: ["contact", "whatsapp", "mobile", "नंबर", "फ़ोन"], reply: "आप हमसे WhatsApp या कॉल के ज़रिए इस नंबर पर संपर्क कर सकते हैं: 📱 **9277409614**" },
+            { keywords: ["loyalty", "point", "रिवॉर्ड", "इनाम", "फायदा"], reply: "✨ हमारा Loyalty Program ग्राहकों के लिए बेहद फायदेमंद है:\n• ₹100 की खरीदारी = 2 Reward Points\n• 1 Point = ₹1 का डिस्काउंट\n• मिनिमम रिडीम = 50 Points\n⚠️ नोट: होलसेल (Wholesale) और उधारी (Credit) खरीदारी पर पॉइंट्स नहीं मिलते।" },
+            { keywords: ["payment", "पेमेंट", "online", "cash", "upi", "google pay"], reply: "हम सभी प्रकार के पेमेंट स्वीकार करते हैं: \n• Cash 💵\n• UPI (Google Pay, PhonePe, Paytm) 📱\n• QR Code Scanner\n• Bank Transfer (आवश्यकता पड़ने पर) 🏦" },
+            { keywords: ["timing", "open", "close", "समय", "खुलती", "बंद"], reply: "हमारी दुकान सप्ताह के सभी दिन खुली रहती है। \n⏰ **समय:** सुबह 10:00 बजे से रात 09:00 बजे तक।" },
+            { keywords: ["location", "address", "दुकान कहाँ", "पता", "shop"], reply: "PIHU ENTERPRISES एक प्रमुख Retail & Wholesale कपड़े की दुकान है। सही लोकेशन और आने के लिए आप हमारे नंबर **9277409614** पर संपर्क कर सकते हैं।" },
+            { keywords: ["offer", "discount", "छूट", "सस्ता", "festival"], reply: "हमारे यहाँ हर सीजन और त्योहार (जैसे दिवाली, होली, ईद, शादी का सीजन) पर विशेष डिस्काउंट और गिफ्ट ऑफर्स मिलते हैं! 🎁 वर्तमान ऑफर जानने के लिए दुकान पर आएं।" },
+            { keywords: ["exchange", "return", "बदलना", "वापस"], reply: "खरीदा हुआ कपड़ा साइज की दिक्कत होने पर 7 दिनों के अंदर बदला (Exchange) जा सकता है। कृपया कपड़े का बिल साथ लाएं। रिफंड या पूरी तरह रिटर्न की सुविधा उपलब्ध नहीं है।" }
+        ],
+        "suggestions": ["Products 🥻", "Contact Number 📞", "Loyalty Points 🪙", "Shop Timing ⏰", "Offers 🎁"]
+    };
+
+    let knowledgeBase = JSON.parse(localStorage.getItem('pihu_kb')) || INITIAL_KNOWLEDGE_BASE;
+    let chatHistory = JSON.parse(localStorage.getItem('pihu_chat_history')) || [];
+
+    const chatBox = document.getElementById('chat-box');
+    const typingLoader = document.getElementById('typing-loader');
+
+    // Load Chat Application
+    window.onload = function() {
+        if(chatHistory.length === 0) {
+            showBotReply("नमस्ते! PIHU ENTERPRISES AI असिस्टेंट में आपका स्वागत है। 🛍️ मैं दुकान के प्रोडक्ट्स, ऑफर्स और रिवॉर्ड पॉइंट्स की जानकारी दे सकता हूँ। आप मुझसे कोई भी सवाल पूछ सकते हैं।");
+        } else {
+            renderHistory();
+        }
+        renderSuggestions();
+    };
+
+    // Render Chat History
+    function renderHistory() {
+        chatBox.innerHTML = '';
+        chatHistory.forEach(msg => {
+            createMessageBubble(msg.text, msg.sender, msg.time);
+        });
+    }
+
+    // Render Quick Suggestions
+    function renderSuggestions() {
+        const segDiv = document.getElementById('suggestions');
+        segDiv.innerHTML = '';
+        knowledgeBase.suggestions.forEach(s => {
+            let chip = document.createElement('span');
+            chip.className = 'suggestion-chip';
+            chip.innerText = s;
+            chip.onclick = () => {
+                document.getElementById('user-msg').value = s.replace(/[^\w\s⚡📞🪙⏰🎁]/gi, '').trim();
+                handleUserMessage();
+            };
+            segDiv.appendChild(chip);
+        });
+    }
+
+    // Handle User Input Message
+    function handleUserMessage() {
+        const inputField = document.getElementById('user-msg');
+        const text = inputField.value.trim();
+        if(!text) return;
+
+        createMessageBubble(text, 'user', getCurrentTime());
+        saveToHistory(text, 'user', getCurrentTime());
+        inputField.value = '';
+
+        // Show AI Typing Animation
+        typingLoader.style.display = 'block';
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        setTimeout(() => {
+            typingLoader.style.display = 'none';
+            processAIResponse(text);
+        }, 800);
+    }
+
+    // Create Message Bubble HTML
+    function createMessageBubble(text, sender, time) {
+        let row = document.createElement('div');
+        row.className = `msg-row ${sender}`;
+        
+        let bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        
+        let formattedText = text.replace(/\n/g, '<br>');
+        bubble.innerHTML = `<div>${formattedText}</div>`;
+        
+        let timeSpan = document.createElement('span');
+        timeSpan.className = 'time';
+        timeSpan.innerText = time;
+        bubble.appendChild(timeSpan);
+
+        if(sender === 'bot') {
+            let copy = document.createElement('button');
+            copy.className = 'copy-btn';
+            copy.innerText = '📋 Copy';
+            copy.onclick = () => {
+                navigator.clipboard.writeText(text);
+                copy.innerText = '✅ Copied';
+                setTimeout(() => copy.innerText = '📋 Copy', 1500);
+            };
+            bubble.appendChild(copy);
+        }
+
+        row.appendChild(bubble);
+        chatBox.appendChild(row);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // Intelligent Matcher Logic (Fuzzy / Score Matrix)
+    function processAIResponse(userInput) {
+        let cleanedInput = userInput.toLowerCase();
+        
+        // Greeting Fast Track
+        let isGreeting = knowledgeBase.greetings.some(g => cleanedInput === g || cleanedInput.includes(g));
+        if(isGreeting && cleanedInput.length < 8) {
+            let greetRule = knowledgeBase.rules.find(r => r.keywords.includes("hi"));
+            showBotReply(greetRule.reply);
+            return;
+        }
+
+        let bestMatch = null;
+        let highestScore = 0;
+
+        // Scoring rules based on multiple keyword match
+        knowledgeBase.rules.forEach(rule => {
+            let currentScore = 0;
+            rule.keywords.forEach(keyword => {
+                if(cleanedInput.includes(keyword.toLowerCase())) {
+                    currentScore += 10; // Exact match weight
+                }
+            });
+            if(currentScore > highestScore) {
+                highestScore = currentScore;
+                bestMatch = rule;
+            }
+        });
+
+        if(highestScore > 0 && bestMatch) {
+            showBotReply(bestMatch.reply);
+        } else {
+            showBotReply(knowledgeBase.fallback);
+        }
+    }
+
+    function showBotReply(replyText) {
+        let time = getCurrentTime();
+        createMessageBubble(replyText, 'bot', time);
+        saveToHistory(replyText, 'bot', time);
+    }
+
+    // Utility Functions
+    function getCurrentTime() {
+        return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function saveToHistory(text, sender, time) {
+        chatHistory.push({ text, sender, time });
+        localStorage.setItem('pihu_chat_history', JSON.stringify(chatHistory));
+    }
+
+    function clearChat() {
+        if(confirm("Are you sure you want to clear chat history?")) {
+            chatHistory = [];
+            localStorage.removeItem('pihu_chat_history');
+            renderHistory();
+            showBotReply("चैट हिस्ट्री साफ़ कर दी गई है। मैं आपकी क्या मदद कर सकता हूँ? 😊");
+        }
+    }
+
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+    }
+
+    function toggleSearch() {
+        let bar = document.getElementById('search-bar');
+        bar.style.display = bar.style.display === 'block' ? 'none' : 'block';
+        if(bar.style.display === 'block') bar.focus();
+    }
+
+    function searchChat() {
+        let filter = document.getElementById('search-bar').value.toLowerCase();
+        let bubbles = document.querySelectorAll('.msg-row');
+        bubbles.forEach(b => {
+            let text = b.innerText.toLowerCase();
+            b.style.display = text.includes(filter) ? 'flex' : 'none';
+        });
+    }
+
+    // Voice Input Feature
+    function startVoiceInput() {
+        window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (window.SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'hi-IN'; // Default support Hindi/English mix
+            document.getElementById('voice-btn').innerText = '🛑';
+            
+            recognition.addEventListener('result', e => {
+                const transcript = Array.from(e.results)
+                    .map(result => result[0])
+                    .map(result => result.transcript)
+                    .join('');
+                document.getElementById('user-msg').value = transcript;
+            });
+
+            recognition.addEventListener('end', () => {
+                document.getElementById('voice-btn').innerText = '🎤';
+                handleUserMessage();
+            });
+
+            recognition.start();
+        } else {
+            alert("Voice Input is not supported in your browser. Use Google Chrome.");
+        }
+    }
+
+    // --- Admin Panel Functions ---
+    function openAdmin() {
+        let password = prompt("Enter Shop Admin Password to Train AI:");
+        if(password === "pihu123" || password === "admin") { // Default password
+            document.getElementById('admin-panel').style.display = 'flex';
+            refreshAdminRulesList();
+        } else {
+            alert("Wrong password! Unauthorized access.");
+        }
+    }
+
+    function closeAdmin() {
+        document.getElementById('admin-panel').style.display = 'none';
+    }
+
+    function saveNewRule() {
+        let kwInput = document.getElementById('new-keywords').value.trim();
+        let repInput = document.getElementById('new-reply').value.trim();
+
+        if(!kwInput || !repInput) {
+            alert("Both keywords and reply are required to train the bot.");
+            return;
+        }
+
+        let kwArray = kwInput.split(',').map(k => k.trim().toLowerCase());
+        
+        knowledgeBase.rules.unshift({
+            keywords: kwArray,
+            reply: repInput
+        });
+
+        loc
